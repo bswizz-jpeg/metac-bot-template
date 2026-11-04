@@ -5,6 +5,27 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import dotenv
+import time as _time
+import litellm as _litellm
+
+# Gemini free tier allows 15 requests/min per model. Space every LLM call
+# (including retries) >= 6s apart (~10 RPM) so we never trip the RPM limit.
+_LLM_MIN_INTERVAL_S = 6.0
+_llm_lock = asyncio.Lock()
+_llm_last = [0.0]
+_orig_acompletion = _litellm.acompletion
+
+
+async def _throttled_acompletion(*args, **kwargs):
+    async with _llm_lock:
+        wait = _llm_last[0] + _LLM_MIN_INTERVAL_S - _time.monotonic()
+        if wait > 0:
+            await asyncio.sleep(wait)
+        _llm_last[0] = _time.monotonic()
+    return await _orig_acompletion(*args, **kwargs)
+
+
+_litellm.acompletion = _throttled_acompletion
 
 # Runtime helpers (env validation, banners, dependency-warning suppression).
 from bot_helpers import (
@@ -43,6 +64,11 @@ from forecasting_tools import (
 
 dotenv.load_dotenv()
 logger = logging.getLogger(__name__)
+
+
+import forecasting_tools.ai_models.general_llm as _gl  # noqa: E402
+
+_gl.acompletion = _throttled_acompletion
 
 
 class FallTemplateBot2026(ForecastBot):
