@@ -250,7 +250,7 @@ class FallTemplateBot2026(ForecastBot):
             num_validation_samples=self._structure_output_validation_samples,
             additional_instructions=parsing_instructions,
         )
-        decimal_pred = max(0.01, min(0.99, binary_prediction.prediction_in_decimal))
+        decimal_pred = max(0.03, min(0.97, binary_prediction.prediction_in_decimal))  # shrink extremes
 
         logger.info(
             f"Forecasted URL {question.page_url} with prediction: {decimal_pred}."
@@ -375,6 +375,7 @@ class FallTemplateBot2026(ForecastBot):
             (a) The time left until the outcome to the question is known.
             (b) The outcome if nothing changed.
             (c) The outcome if the current trend continued.
+            (c2) The historical base rate for events of this type, and how far the specifics justify moving from it.
             (d) The expectations of experts and markets.
             (e) A brief description of an unexpected scenario that results in a low outcome.
             (f) A brief description of an unexpected scenario that results in a high outcome.
